@@ -1,4 +1,4 @@
-package com.hipradeep.code.controlers;
+package com.hipradeep.code.controllers;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
