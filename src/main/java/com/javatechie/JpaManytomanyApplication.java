@@ -1,13 +1,13 @@
-package com.hipradeep.code;
+package com.javatechie;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class SpringProjectsApplication {
+public class JpaManytomanyApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(SpringProjectsApplication.class, args);
+		SpringApplication.run(JpaManytomanyApplication.class, args);
 	}
 
 }
