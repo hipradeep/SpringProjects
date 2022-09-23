@@ -24,6 +24,8 @@ public class StudentCourseController {
 
     @PostMapping
     public Student saveStudentWithCourse(@RequestBody Student student){
+        System.out.println(student.getName());
+
       return   studentRepository.save(student);
     }
 

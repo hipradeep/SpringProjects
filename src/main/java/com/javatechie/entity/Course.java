@@ -25,8 +25,8 @@ public class Course {
     private int modules;
     private double fee;
 
-    @ManyToMany(mappedBy = "courses",fetch = FetchType.LAZY)
-    @JsonBackReference
+   @ManyToMany(mappedBy = "courses",fetch = FetchType.LAZY)
+    //@JsonBackReference
     private Set<Student> students;
 
 
