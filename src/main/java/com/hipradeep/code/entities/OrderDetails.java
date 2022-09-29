@@ -21,7 +21,7 @@ public class OrderDetails {
     private String subTotal;
 
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     private Product product;
 
     @ManyToOne
