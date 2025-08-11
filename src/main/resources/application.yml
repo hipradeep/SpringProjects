@@ -1,0 +1,37 @@
+# Server Configuration
+server:
+  port: 8080
+
+# Spring Application Configuration
+spring:
+  application:
+    name: USER-SERVICE  # Name of the microservice (used in service discovery, logging, etc.)
+
+  # Database Configuration (MySQL)
+  datasource:
+    url: jdbc:mysql://localhost:3306/ms_user_schema
+    username: root
+    password: 1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA & Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: create  # Hibernate will update the schema automatically (options: none, validate, update, create, create-drop)
+    show-sql: true  # Log SQL queries to the console (useful for debugging)
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect  # Optimizes SQL for MySQL 8+
+
+
+
+
+
+#debug: true  # Enables Spring Boot debug mode (shows auto-configuration report)
+#logging:
+  #level:
+    #root: INFO   # Default level for all loggers
+    #org.springframework.web: DEBUG  # Spring Web debug logs
+    #org.hibernate.SQL: DEBUG       # Show SQL queries
+    #org.hibernate.type: TRACE      # Show query parameters
+    #com.hipradeep.code: DEBUG      # Your application packages
