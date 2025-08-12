@@ -21,4 +21,8 @@ public class HomeController {
     public String dashboard() {
         return "dashboard";
     }
+    @GetMapping("/dashboard-user")
+    public String dashboardUser() {
+        return "dashboard-user";
+    }
 }
