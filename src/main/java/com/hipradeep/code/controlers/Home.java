@@ -1,5 +1,6 @@
 package com.hipradeep.code.controlers;
 
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -14,9 +15,20 @@ public class Home {
     }
 
     //http://localhost:8080/welcome
-    @RequestMapping("/welcome")
-    public String homeAS()
-    {
-        return "Welcome Pradeep";
+    @GetMapping("/welcome")
+    public String welcome() {
+        return "Welcome, authenticated user!";
+    }
+
+
+
+    @GetMapping("/home/premium")
+    public String premium() {
+        return "Welcome to the premium section, USER role!";
+    }
+
+    @GetMapping("/home/trunk") //access by ADMIN/USER
+    public String trunk() {
+        return "Welcome to the premium section, ADMIN/USER role!";
     }
 }
