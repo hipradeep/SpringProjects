@@ -16,6 +16,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
@@ -31,6 +34,10 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain2(HttpSecurity http) throws Exception {
+        //Change Token Parameter Name
+        HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
+        repository.setParameterName("custom_csrf"); // default is "_csrf"
+
         http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
@@ -50,6 +57,19 @@ public class SecurityConfig {
                         .defaultSuccessUrl("/dashboard", true)
                         .permitAll()
                 )
+                // ============== CSRF (DEFAULT: HttpSession) ===============
+                .csrf(csrf -> csrf
+                        // No need to configure repository - uses HttpSession by default
+                        // Optional: Customize CSRF token handling (for AJAX/SPA compatibility)
+                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        .csrfTokenRepository(repository)
+                )
+                // ============== CSRF (COOKIE STORAGE) ========================
+//                .csrf(csrf -> csrf
+//                            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) // Store in cookie
+//                            .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()) // For modern SPAs
+//                )
+
                 .logout(logout -> logout
                         .logoutSuccessUrl("/login?logout")
                         .permitAll()
