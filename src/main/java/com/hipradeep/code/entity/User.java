@@ -3,6 +3,7 @@ package com.hipradeep.code.entity;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
 import java.util.Set;
 @Data
 public class User {
@@ -17,5 +18,6 @@ public class User {
         this.email = email;
         this.roles = roles;
     }
+
 
 }

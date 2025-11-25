@@ -1,6 +1,6 @@
 package com.hipradeep.code.controlers;
 
-import com.hipradeep.code.config.CustomUserDetailsService2;
+import com.hipradeep.code.config.CustomUserDetailsService;
 import com.hipradeep.code.config.JwtUtil;
 import com.hipradeep.code.dto.AuthRequest;
 import com.hipradeep.code.dto.AuthResponse;
@@ -30,7 +30,7 @@ public class AuthController {
     private JwtUtil jwtUtil;
 
     @Autowired
-    private CustomUserDetailsService2 userDetailsService;
+    private CustomUserDetailsService userDetailsService;
 
     @Autowired
     private UserRepository userRepository;
