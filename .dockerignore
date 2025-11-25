@@ -1,0 +1,10 @@
+.git
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+**/target/classes/
+**/target/test-classes/
+**/.project
+**/.classpath
+**/.settings/
