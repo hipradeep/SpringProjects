@@ -1,4 +1,6 @@
 ```java
+Client → Security Filter Chain → DispatcherServlet → Controller
+
 Client
   |
   | POST /authenticate (username, password)
