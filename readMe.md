@@ -46,9 +46,7 @@ Authorization rules (hasRole, authenticated)
   v
 Controller Method
 
-
-----------------------------------------------
--------------------------------------------------
+```
 
 # Complete JWT Authentication Flow in Spring Boot
 
@@ -288,7 +286,4 @@ UserRepository
 PasswordEncoder.matches()
     ↓
 Success → JWT generated
-```
-
-
 ```
