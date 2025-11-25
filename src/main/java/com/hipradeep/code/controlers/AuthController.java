@@ -35,6 +35,10 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
+    //{
+    //    "username":"admin",
+    //    "password":"password"
+    //}
     @PostMapping("/authenticate")
     public ResponseEntity<?> createAuthenticationToken(@RequestBody AuthRequest authRequest) throws Exception {
         Authentication authentication = null;
