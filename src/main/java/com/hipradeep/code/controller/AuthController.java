@@ -4,6 +4,7 @@ import com.hipradeep.code.config.CustomUserDetailsService;
 import com.hipradeep.code.config.JwtUtil;
 import com.hipradeep.code.dto.AuthRequest;
 import com.hipradeep.code.dto.AuthResponse;
+import com.hipradeep.code.dto.RefreshTokenRequest;
 import com.hipradeep.code.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -59,10 +60,26 @@ public class AuthController {
 //                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         final String jwt = jwtUtil.generateToken(userDetails);
+        final String refreshToken = jwtUtil.generateRefreshToken(userDetails);
 
-        return ResponseEntity.ok(new AuthResponse(jwt));
+        return ResponseEntity.ok(new AuthResponse(jwt, refreshToken));
     }
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest refreshRequest) throws Exception {
+        String refreshToken = refreshRequest.getRefreshToken();
+        String username = jwtUtil.extractUsername(refreshToken);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
+        if (jwtUtil.validateToken(refreshToken, userDetails)) {
+            String newAccessToken = jwtUtil.generateToken(userDetails);
+            //to useAbsolute Session Expiry, we have to return old refreshToken
+            //Generate new refresh token (ROTATION)
+            final String newRefreshToken = jwtUtil.generateRefreshToken(userDetails);
+            return ResponseEntity.ok(new AuthResponse(newAccessToken, newRefreshToken));
+        } else {
+            throw new Exception("Invalid Refresh Token");
+        }
+    }
 }
 

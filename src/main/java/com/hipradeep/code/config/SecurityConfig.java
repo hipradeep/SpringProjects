@@ -11,18 +11,25 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.core.userdetails.UserDetails;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfigRoleBased {
+public class SecurityConfig {
 
     @Autowired
     private JwtRequestFilter jwtRequestFilter;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private AuthenticationConfiguration authenticationConfiguration;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        String[] permitAllUrls = {"/authenticate", "/public/**"};
+        String[] permitAllUrls = {"/authenticate", "/login", "/public/**", "/refresh-token"};
         String[] authenticatedUrls = {"/welcome", "/profile/**"};
         String[] userRoleUrls = {"/home/premium", "/user/**"};
         String[] adminRoleUrls = {"/home/trunk", "/admin/**"};
@@ -46,7 +53,8 @@ public class SecurityConfigRoleBased {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)); // No sessions
 
         // Add JWT filter before UsernamePasswordAuthenticationFilter
-        http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAt(jsonAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -54,6 +62,19 @@ public class SecurityConfigRoleBased {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public JsonUsernamePasswordAuthFilter jsonAuthFilter() throws Exception {
+        JsonUsernamePasswordAuthFilter filter = new JsonUsernamePasswordAuthFilter(authenticationManager(authenticationConfiguration));
+        filter.setAuthenticationSuccessHandler((req, res, auth) -> {
+            UserDetails userDetails = (UserDetails) auth.getPrincipal();
+            String token = jwtUtil.generateToken(userDetails);
+            String refreshToken = jwtUtil.generateRefreshToken(userDetails);
+            res.setContentType("application/json");
+            res.getWriter().write("{\"jwt\": \"" + token + "\", \"refreshToken\": \"" + refreshToken + "\"}");
+        });
+        return filter;
     }
 
 
