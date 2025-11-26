@@ -1,21 +1,17 @@
-package com.hipradeep.code.controlers;
+package com.hipradeep.code.controller;
 
 import com.hipradeep.code.config.CustomUserDetailsService;
 import com.hipradeep.code.config.JwtUtil;
 import com.hipradeep.code.dto.AuthRequest;
 import com.hipradeep.code.dto.AuthResponse;
-import com.hipradeep.code.entity.User;
 import com.hipradeep.code.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.CachingUserDetailsService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
