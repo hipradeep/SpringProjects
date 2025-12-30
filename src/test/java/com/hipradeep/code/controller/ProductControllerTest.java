@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -47,7 +48,7 @@ public class ProductControllerTest {
     public void testGetProducts() {
         Product p1 = new Product(101, "Mobile", 1, 15000.0);
         Product p2 = new Product(102, "Laptop", 1, 55000.0);
-        when(service.getProducts()).thenReturn(Flux.just(p1, p2));
+        when(service.getProducts(any(Pageable.class))).thenReturn(Flux.just(p1, p2));
 
         webTestClient.get()
                 .uri("/products")

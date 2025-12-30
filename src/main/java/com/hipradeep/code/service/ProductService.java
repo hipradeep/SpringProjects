@@ -6,6 +6,7 @@ import com.hipradeep.code.repository.ProductRepository;
 import com.hipradeep.code.repository.TagRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 // Removed Range import
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -23,6 +24,14 @@ public class ProductService {
 
     public Flux<Product> getProducts() {
         return repository.findAll()
+                .flatMap(product -> tagRepository.findByProductId(product.getId())
+                        .collectList()
+                        .doOnNext(product::setTags)
+                        .thenReturn(product));
+    }
+
+    public Flux<Product> getProducts(Pageable pageable) {
+        return repository.findAllBy(pageable)
                 .flatMap(product -> tagRepository.findByProductId(product.getId())
                         .collectList()
                         .doOnNext(product::setTags)

@@ -70,7 +70,12 @@ This project is configured to use a **local PostgreSQL server**.
 curl -X POST http://localhost:8080/products -H "Content-Type: application/json" -d "{\"name\":\"mobile\",\"qty\":1,\"price\":15000, \"tags\":[{\"name\":\"electronics\"}, {\"name\":\"gadget\"}]}"
 ```
 
-### Get All Products
+### Get All Products (Paginated & Sorted)
+```cmd
+curl "http://localhost:8080/products?page=0&size=5&sort=price,desc"
+```
+
+### Get All Products (Default)
 ```cmd
 curl http://localhost:8080/products
 ```
