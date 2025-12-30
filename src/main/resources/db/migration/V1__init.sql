@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    qty INT,
+    price DOUBLE PRECISION
+);
+
+CREATE TABLE IF NOT EXISTS tags (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    product_id INT REFERENCES products(id) ON DELETE CASCADE
+);

@@ -29,6 +29,8 @@ public class Product {
     @Positive(message = "Price must be positive")
     private double price;
 
+    private String description;
+
     @Transient
     private List<Tag> tags;
 
