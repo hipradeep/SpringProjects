@@ -26,3 +26,13 @@ Introduced in Spring WebFlux as a more programmatic and functional alternative.
 - **Immutability and Composability**: Functional routers are immutable and can be easily composed or shared.
 - **Reactive Nature**: The functional style aligns more closely with the reactive programming paradigm (Project Reactor).
 - **Control**: You have full control over the request/response flow without relying on Spring's internal annotation processing.
+
+## Swagger UI Documentation
+
+This project uses `springdoc-openapi-ui` to generate API documentation.
+
+### Accessing Swagger UI
+Once the application is running, you can access the Swagger UI at:
+[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+
+This interface allows you to visualize and interact with the API's resources without having any of the implementation logic in place.
