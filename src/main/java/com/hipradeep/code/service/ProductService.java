@@ -1,17 +1,16 @@
 package com.hipradeep.code.service;
 
 import com.hipradeep.code.entity.Product;
-import com.hipradeep.code.entity.Tag;
 import com.hipradeep.code.repository.ProductRepository;
 import com.hipradeep.code.repository.TagRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 // Removed Range import
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import com.hipradeep.code.exception.ProductNotFoundException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import java.util.Collections;
-import java.util.List;
 
 @Service
 public class ProductService {
@@ -40,6 +39,7 @@ public class ProductService {
 
     public Mono<Product> getProductById(Integer id) {
         return repository.findById(id)
+                .switchIfEmpty(Mono.error(new ProductNotFoundException("Product not found with id: " + id)))
                 .flatMap(product -> tagRepository.findByProductId(product.getId())
                         .collectList()
                         .doOnNext(product::setTags)
@@ -70,6 +70,7 @@ public class ProductService {
 
     public Mono<Product> updateProduct(Mono<Product> productMono, Integer id) {
         return repository.findById(id)
+                .switchIfEmpty(Mono.error(new ProductNotFoundException("Product not found with id: " + id)))
                 .flatMap(existingProduct -> productMono.flatMap(product -> {
                     product.setId(id);
                     return repository.save(product)

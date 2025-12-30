@@ -51,6 +51,12 @@ Spring Data R2DBC does not yet support automatic collection mapping (like JPA's 
 - **Fetching**: When getting a product, we fetch the `tags` list in a separate reactive call and attach it to the `Product` entity (which is marked with `@Transient`).
 - **Data Integrity**: We use `ON DELETE CASCADE` in the SQL schema so that when a product is deleted, its tags are automatically removed by the database.
 
+### 4. How are Validation & Errors handled?
+We use `spring-boot-starter-validation` (JSR-303) and a unified global exception handler.
+- **Validation**: Fields in `Product` and `Tag` are annotated with `@NotBlank`, `@Min`, and `@Positive`.
+- **Validation Errors**: A `@RestControllerAdvice` (`GlobalExceptionHandler`) catches `WebExchangeBindException` and returns a structured `400 Bad Request` with field-specific error messages.
+- **Custom Exceptions**: We implemented `ProductNotFoundException`. If you request a non-existent ID, the service throws this runtime exception, which the global handler catches to return a clean `404 Not Found` response.
+
 ---
 
 ## How to Run locally

@@ -6,6 +6,10 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.Table;
+
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Positive;
 import java.util.List;
 
 @Data
@@ -15,8 +19,14 @@ import java.util.List;
 public class Product {
     @Id
     private Integer id;
+
+    @NotBlank(message = "Product name is required")
     private String name;
+
+    @Min(value = 1, message = "Quantity should be at least 1")
     private int qty;
+
+    @Positive(message = "Price must be positive")
     private double price;
 
     @Transient

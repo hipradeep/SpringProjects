@@ -95,6 +95,19 @@ public class ProductControllerTest {
     }
 
     @Test
+    public void testGetProductByIdNotFound() {
+        when(service.getProductById(999)).thenReturn(Mono
+                .error(new com.hipradeep.code.exception.ProductNotFoundException("Product not found with id: 999")));
+
+        webTestClient.get()
+                .uri("/products/999")
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.errorMessage").isEqualTo("Product not found with id: 999");
+    }
+
+    @Test
     public void testGetProductInRange() {
         Product p1 = new Product(101, "Mobile", 1, 15000.0);
         Product p2 = new Product(102, "Laptop", 1, 55000.0);

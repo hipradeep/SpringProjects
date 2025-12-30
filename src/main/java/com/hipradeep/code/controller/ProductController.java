@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import javax.validation.Valid;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -50,12 +51,12 @@ public class ProductController {
     }
 
     @PostMapping
-    public Mono<Product> saveProduct(@RequestBody Mono<Product> productMono) {
+    public Mono<Product> saveProduct(@Valid @RequestBody Mono<Product> productMono) {
         return service.saveProduct(productMono);
     }
 
     @PutMapping("/update/{id}")
-    public Mono<Product> updateProduct(@RequestBody Mono<Product> productMono, @PathVariable Integer id) {
+    public Mono<Product> updateProduct(@Valid @RequestBody Mono<Product> productMono, @PathVariable Integer id) {
         return service.updateProduct(productMono, id);
     }
 
