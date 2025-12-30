@@ -1,17 +1,18 @@
-# Reactive Spring Boot PostgreSQL CRUD (R2DBC)
+# Reactive Spring Boot PostgreSQL CRUD (R2DBC) - Functional Endpoints
 
-This project demonstrates a full Reactive CRUD application using Spring WebFlux and **Spring Data R2DBC** with PostgreSQL.
+This project demonstrates a full Reactive CRUD application using **Spring WebFlux Functional Endpoints (Router/Handler)** and **Spring Data R2DBC** with PostgreSQL.
 
 ## Architecture Overview
 - **Framework**: Spring Boot 2.5.7 (Reactive)
 - **Database**: PostgreSQL (via R2DBC)
 - **Language**: Java 21
+- **Pattern**: **Functional Endpoints** (Replaces `@RestController`)
 - **Layers**:
-  - `ProductController`: Handles HTTP requests and returns `Product` entities.
+  - `RouterConfig`: Defines the API routes (`/router/products...`).
+  - `ProductHandler`: Handles HTTP requests and returns `ServerResponse`.
   - `ProductService`: Business logic for product operations.
-  - `ProductRepository`: Reactive database access via `R2dbcRepository<Product, Integer>`.
-  - `Product`: Database entity where `id` is automatically generated. Now includes a list of `tags`.
-  - `Tag`: Related entity stored in a separate `tags` table (One-to-Many).
+  - `ProductRepository`: Reactive database access via `R2dbcRepository`.
+  - `GlobalErrorWebExceptionHandler`: Global Exception Handling (rendering JSON errors).
 
 ---
 
@@ -28,34 +29,66 @@ mvn spring-boot:run
 
 ---
 
-## FAQ & Technical Concepts
+## Global Exception Handling
+The project implements a global exception handler for functional endpoints.
+- **Handler**: `GlobalErrorWebExceptionHandler`
+- **Customization**: `GlobalErrorAttributes`
+- **Behavior**:
+    - **ProductNotFoundException**: Returns `404 Not Found` with custom JSON.
+    - **Other Errors**: Returns `500 Internal Server Error`.
 
-### 1. Is `schema.sql` really necessary?
-**Yes.** Unlike Spring Data JPA (Hibernate), which can auto-generate tables from entities, **Spring Data R2DBC** is a lightweight specification that does not support DDL (Data Definition Language) generation. 
 
-- **Without `schema.sql`**: R2DBC will throw a `relation "products" does not exist` error on startup if the table is missing.
-- **Data Preservation**: Use `CREATE TABLE IF NOT EXISTS` to keep your data. We only used `DROP TABLE` once to force the `SERIAL` sequence fix. If you use `DROP TABLE`, all your data will be deleted on every restart!
+---
 
-### 2. How is the ID generated automatically?
-Automatic ID generation in this setup involves three layers working together:
+## Traditional vs. Reactive Global Exception Handling
 
-1.  **PostgreSQL (`SERIAL`)**: In [schema.sql](file:///c:/Users/hipradeep/Documents/SpringProjects/src/main/resources/schema.sql), the `id` column is defined as `SERIAL`. This creates a sequence in the database that automatically increments every time a new row is inserted without an ID.
-2.  **Spring Data R2DBC (`@Id`)**: In our [Product](file:///c:/Users/hipradeep/Documents/SpringProjects/src/main/java/com/hipradeep/code/entity/Product.java) entity, the `id` field is marked with `@Id`. 
-3.  **The "Null ID" Rule**: When calling `repository.save(product)`, Spring Data R2DBC checks if the `id` is `null`. 
-    - If `id` is **null**, it executes an `INSERT` statement *omitting* the ID column, allowing PostgreSQL to assign the next value from the sequence.
-    - If `id` is **not null**, it executes an `UPDATE` statement.
+| Feature | Traditional Spring MVC (`@ControllerAdvice`) | Reactive Spring WebFlux (`WebExceptionHandler`) |
+| :--- | :--- | :--- |
+| **Execution Model** | Blocking / Synchronous | Non-Blocking / Asynchronous |
+| **Base Class** | `ResponseEntityExceptionHandler` | `AbstractErrorWebExceptionHandler` |
+| **Return Unit** | `ResponseEntity<T>` | `Mono<ServerResponse>` |
+| **Context** | `WebRequest` | `ServerRequest` |
+| **Error Attributes** | `ErrorAttributes` (Servlet-based) | `ErrorAttributes` (Reactive-based) |
+| **Mechanism** | Uses reflection and AOP proxies to intercept exceptions. | Operating at the lower level of the HTTP handling chain (Netty/Reactor). |
 
-### 3. How is the 1:N (Tags) relationship handled?
-Spring Data R2DBC does not yet support automatic collection mapping (like JPA's `@OneToMany`). 
-- **Manual Orchestration**: In `ProductService`, we manually coordinate between `ProductRepository` and `TagRepository`.
-- **Fetching**: When getting a product, we fetch the `tags` list in a separate reactive call and attach it to the `Product` entity (which is marked with `@Transient`).
-- **Data Integrity**: We use `ON DELETE CASCADE` in the SQL schema so that when a product is deleted, its tags are automatically removed by the database.
+In this project, we use `GlobalErrorWebExceptionHandler` which extends `AbstractErrorWebExceptionHandler`. This is necessary because in a functional reactive application, exceptions might occur during the reactive stream processing, and standard `@ControllerAdvice` may not catch all signals correctly, especially those happening before the controller level (e.g., routing errors).
 
-### 4. How are Validation & Errors handled?
-We use `spring-boot-starter-validation` (JSR-303) and a unified global exception handler.
-- **Validation**: Fields in `Product` and `Tag` are annotated with `@NotBlank`, `@Min`, and `@Positive`.
-- **Validation Errors**: A `@RestControllerAdvice` (`GlobalExceptionHandler`) catches `WebExchangeBindException` and returns a structured `400 Bad Request` with field-specific error messages.
-- **Custom Exceptions**: We implemented `ProductNotFoundException`. If you request a non-existent ID, the service throws this runtime exception, which the global handler catches to return a clean `404 Not Found` response.
+---
+
+
+## API Documentation (CURL Commands)
+
+**Note**: All endpoints now use the `/router` prefix as defined in `RouterConfig`.
+
+### Save a Product (With Tags)
+```cmd
+curl -X POST http://localhost:8080/router/products/save -H "Content-Type: application/json" -d "{\"name\":\"mobile\",\"qty\":1,\"price\":15000, \"tags\":[{\"name\":\"electronics\"}, {\"name\":\"gadget\"}]}"
+```
+
+### Get All Products
+```cmd
+curl http://localhost:8080/router/products
+```
+
+### Get Product by ID
+```cmd
+curl http://localhost:8080/router/products/1
+```
+
+### Get Products in Price Range
+```cmd
+curl "http://localhost:8080/router/products/product-range?min=10000&max=20000"
+```
+
+### Update a Product
+```cmd
+curl -X PUT http://localhost:8080/router/products/update/1 -H "Content-Type: application/json" -d "{\"name\":\"mobile-updated\",\"qty\":2,\"price\":16000, \"tags\":[{\"name\":\"premium\"}, {\"name\":\"new-arrival\"}]}"
+```
+
+### Delete a Product
+```cmd
+curl -X DELETE http://localhost:8080/router/products/delete/1
+```
 
 ---
 
@@ -66,42 +99,3 @@ This project is configured to use a **local PostgreSQL server**.
 - **Database**: Create a database named `products_database`.
 - **User/Password**: `postgres` / `1234`.
 - **Auto-Schema**: The table `products` is automatically created on startup.
-
----
-
-## API Documentation (CURL Commands)
-
-### Save a Product (With Tags)
-```cmd
-curl -X POST http://localhost:8080/products -H "Content-Type: application/json" -d "{\"name\":\"mobile\",\"qty\":1,\"price\":15000, \"tags\":[{\"name\":\"electronics\"}, {\"name\":\"gadget\"}]}"
-```
-
-### Get All Products (Paginated & Sorted)
-```cmd
-curl "http://localhost:8080/products?page=0&size=5&sort=price,desc"
-```
-
-### Get All Products (Default)
-```cmd
-curl http://localhost:8080/products
-```
-
-### Get Product by ID
-```cmd
-curl http://localhost:8080/products/1
-```
-
-### Get Products in Price Range
-```cmd
-curl "http://localhost:8080/products/product-range?min=10000&max=20000"
-```
-
-### Update a Product (With Tags)
-```cmd
-curl -X PUT http://localhost:8080/products/update/1 -H "Content-Type: application/json" -d "{\"name\":\"mobile-updated\",\"qty\":2,\"price\":16000, \"tags\":[{\"name\":\"premium\"}, {\"name\":\"new-arrival\"}]}"
-```
-
-### Delete a Product
-```cmd
-curl -X DELETE http://localhost:8080/products/delete/1
-```
