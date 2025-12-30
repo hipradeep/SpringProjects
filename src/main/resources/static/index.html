@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Spring Boot Video Streaming</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .video-container {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        video {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Video Streaming Demo</h1>
+    <div class="video-container">
+        <!-- Replace 'demo' with your filename. Use /stream/demo for MP4, /stream/mkv/demo for MKV. -->
+        <video src="/stream/video1" width="720px" height="480px" controls preload="none">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+</body>
+
+</html>
