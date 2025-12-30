@@ -85,7 +85,8 @@ It solves "Schema Drift". Without a migration tool, it's easy for manual changes
 > **Q: What if I remove a field from the `Product` entity?**
 > - **Database**: The column and its existing data **remains** in the database.
 > - **App**: Spring Data R2DBC simply ignores the column.
-> - **To Delete**: You must explicitly create a migration script (e.g., `V3__drop_description.sql`) with `ALTER TABLE products DROP COLUMN description;` if you want to destroy that data.
+> - **To Delete**: You must explicitly create a migration script (e.g., `V3__drop_description.sql`) with `ALTER TABLE products DROP COLUMN description;`.
+>   > **WARNING**: This will permanently delete the column and **ALL data** inside it immediately upon restart.
 >
 > **Q: How do I add Flyway to an *existing* database?**
 > 1.  **Snapshot**: Create a `V1__init.sql` that contains the `CREATE TABLE` scripts for your *current* database state.
@@ -95,6 +96,14 @@ It solves "Schema Drift". Without a migration tool, it's easy for manual changes
 > **Q: Does Flyway auto-generate scripts (like Hibernate)?**
 > - **No**. Flyway is a **Script Runner**, not a generator.
 > - **R2DBC limitations**: Unlike JPA, R2DBC cannot scan your entities to generate SQL. You **must** write the SQL files manually in `db/migration`. If you delete them, nothing happens!
+>
+> **Q: Can I rollback a migration (undo)?**
+> - **Not easily**. The "Undo" feature is part of the paid Flyway Teams edition.
+> - **Strategy**: We "Roll Forward". If `V2` breaks something, we don't delete it. We create `V3__fix_V2.sql` to revert the changes or fix the issue.
+>
+> **Q: Is this setup production-ready?**
+> - **Yes, but with a caveat**: We are currently packaging **two** drivers: `R2DBC` (for the app) and `JDBC` (just for Flyway).
+> - **Optimization**: In large-scale cloud architectures (like Kubernetes), you might run Flyway as a separate "Init Container" or CI/CD step so your main application doesn't need the heavy JDBC driver.
 
 #### **What are the alternatives?**
 - **Liquibase**: Defines changes in XML/YAML/JSON (database-agnostic) but is more verbose.
