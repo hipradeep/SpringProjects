@@ -3,6 +3,7 @@ package com.test.demo.conditional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.lib.autoconfigure.MyLibService;
 
 @RestController
 public class ConditionalController {
@@ -15,6 +16,9 @@ public class ConditionalController {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private MyLibService myLibService;
 
     /**
      * Flow of @Conditional OS-based selection:
@@ -64,5 +68,10 @@ public class ConditionalController {
     @GetMapping("/notify")
     public String notifyUser() {
         return notificationService.send("Hello from @ConditionalOnMissingBean!");
+    }
+
+    @GetMapping("/lib-status")
+    public String getLibStatus() {
+        return myLibService.getInfo();
     }
 }
