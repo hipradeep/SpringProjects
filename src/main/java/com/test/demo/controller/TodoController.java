@@ -21,4 +21,9 @@ public class TodoController {
     public Todo getTodoById(@PathVariable Integer id) {
         return todoService.findById(id);
     }
+
+    @org.springframework.web.bind.annotation.PostMapping
+    public Todo createTodo(@org.springframework.web.bind.annotation.RequestBody Todo newTodo) {
+        return todoService.createTodo(newTodo);
+    }
 }

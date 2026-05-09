@@ -41,4 +41,24 @@ public class TodoService {
         // Step 6: Extract the deserialized body from the ResponseEntity.
         return response.getBody();
     }
+    public Todo createTodo(Todo newTodo) {
+        log.info("Creating a new todo using RestTemplate (Legacy POST)");
+
+        // Step 1: Define the target URL for creating a resource.
+        String url = "https://jsonplaceholder.typicode.com/todos";
+
+        // Step 2: Create HttpHeaders and set custom headers, e.g., Content-Type.
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Source", "Spring-RestTemplate-POST");
+        headers.set("Content-Type", "application/json");
+
+        // Step 3: Wrap the headers and the body (newTodo object) in an HttpEntity.
+        HttpEntity<Todo> entity = new HttpEntity<>(newTodo, headers);
+
+        // Step 4: Execute the POST request using exchange (or postForObject).
+        // Here we use postForObject which is a convenient method for POST requests.
+        Todo createdTodo = restTemplate.postForObject(url, entity, Todo.class);
+
+        return createdTodo;
+    }
 }
