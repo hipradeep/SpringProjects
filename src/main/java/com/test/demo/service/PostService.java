@@ -17,6 +17,9 @@ public class PostService {
 
     public PostService() {
         log.info("Initializing RestClient with base URL: https://jsonplaceholder.typicode.com");
+        // Step 1: Initialize the RestClient using its builder. 
+        // We set a base URL so we don't have to repeat it in every request.
+        // We also set a default header that will be applied to all requests.
         this.restClient = RestClient.builder()
                 .baseUrl("https://jsonplaceholder.typicode.com")
                 .defaultHeader("X-App-Name", "Demo-Application")
@@ -25,10 +28,15 @@ public class PostService {
 
     public List<Post> findAll() {
         log.info("Fetching all posts...");
+        // Step 2: Use the initialized RestClient to perform a GET request.
         return restClient.get()
+                // Step 3: Append the specific URI path for this endpoint.
                 .uri("/posts")
+                // Step 4: Add any request-specific headers.
                 .header("X-Source", "Spring-RestClient")
+                // Step 5: Execute the request and retrieve the response.
                 .retrieve()
+                // Step 6: Convert the JSON response body into a List of Post objects.
                 .body(new ParameterizedTypeReference<List<Post>>() {});
     }
 

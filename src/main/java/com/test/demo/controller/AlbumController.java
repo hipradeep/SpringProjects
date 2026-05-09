@@ -21,7 +21,6 @@ public class AlbumController {
 
     @GetMapping("/{id}")
     public CompletableFuture<Album> getAlbumById(@PathVariable Integer id) {
-        // Spring Web MVC natively supports returning CompletableFuture for async processing
         return albumService.findByIdAsync(id);
     }
 }
