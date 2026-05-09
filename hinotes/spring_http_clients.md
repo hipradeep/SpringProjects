@@ -41,36 +41,48 @@ public class PostService {
 
 ## 2. Java HttpClient (Standard Java 11+)
 
-The `java.net.http.HttpClient` is built into the JDK. It is a good choice when you want to avoid Spring-specific dependencies or need a more low-level control.
+The `java.net.http.HttpClient` (introduced in Java 9, standardized in Java 11) is built into the JDK. It supports both synchronous and asynchronous non-blocking requests.
 
-### Implementation (UserService.java)
+### Implementation 
+
+**Synchronous Example (UserService.java):**
 ```java
-@Service
-public class UserService {
-    private final HttpClient httpClient;
-    private final ObjectMapper objectMapper;
-
-    public UserService(ObjectMapper objectMapper) {
-        this.httpClient = HttpClient.newHttpClient();
-        this.objectMapper = objectMapper;
-    }
-
     public User findUserById(Integer id) {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://jsonplaceholder.typicode.com/users/" + id))
-                .header("X-Source", "Java-HttpClient") // Add header
+                .header("X-Source", "Java-HttpClient")
                 .GET()
                 .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return objectMapper.readValue(response.body(), User.class);
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        return objectMapper.readValue(response.body(), User.class);
     }
-}
+```
+
+**Asynchronous Example (AlbumService.java):**
+```java
+    public CompletableFuture<Album> findByIdAsync(Integer id) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://jsonplaceholder.typicode.com/albums/" + id))
+                .GET()
+                .build();
+
+        // sendAsync returns a CompletableFuture
+        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    try {
+                        return objectMapper.readValue(response.body(), Album.class);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+    }
 ```
 
 **Pros:**
 - No external library required (built into JDK).
-- Supports both synchronous and asynchronous calls.
+- Native support for asynchronous programming (`CompletableFuture`).
+- Supports HTTP/2 natively.
 - Lightweight and efficient.
 
 ---
@@ -117,7 +129,40 @@ public class CommentService {
 
 ---
 
-## 4. RestTemplate (Legacy / Maintenance Mode)
+## 4. HttpURLConnection (Java 8 Legacy)
+
+Before Java 11's `HttpClient`, `HttpURLConnection` was the standard way to perform HTTP requests in the JDK. It is much more verbose as it requires manual handling of streams and status codes.
+
+### Implementation (PhotoService.java)
+```java
+@Service
+public class PhotoService {
+    public Photo findById(Integer id) {
+        URL url = new URL("https://jsonplaceholder.typicode.com/photos/" + id);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode == 200) {
+            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            // Read stream and deserialize manually...
+        }
+    }
+}
+```
+
+**Pros:**
+- Available in all Java versions (very old legacy support).
+- No external dependencies.
+
+**Cons:**
+- Extremely verbose and boilerplate-heavy.
+- No built-in JSON support.
+- Difficult to handle timeouts and complex headers.
+
+---
+
+## 5. RestTemplate (Legacy / Maintenance Mode)
 
 `RestTemplate` was the standard Spring HTTP client for many years. While it is still widely used, it is now in maintenance mode in favor of `RestClient`.
 
@@ -157,35 +202,34 @@ public class TodoService {
 
 ## Comparison Summary
 
-| Feature | RestClient | Java HttpClient | WebClient | RestTemplate |
-| :--- | :--- | :--- | :--- | :--- |
-| **Framework** | Spring Boot 3.2+ | Standard JDK 11+ | Spring WebFlux | Spring (Legacy) |
-| **JSON Mapping** | Automatic | Manual | Automatic | Automatic |
-| **Asynchronous** | No | Yes | Yes (Native) | No |
-| **Non-blocking** | No | No | Yes | No |
-| **Status** | Active | Active | Active | Maintenance |
-
+| Feature | RestClient | Java 11+ HttpClient | WebClient | HttpURLConnection | RestTemplate |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Framework** | Spring Boot 3.2+ | Standard JDK 11+ | Spring WebFlux | Standard JDK (Legacy) | Spring (Legacy) |
+| **JSON Mapping** | Automatic | Manual | Automatic | Manual | Automatic |
+| **Asynchronous** | No | Yes | Yes (Native) | No | No |
+| **Non-blocking** | No | No | Yes | No | No |
+| **Status** | Active | Active | Active | Legacy | Maintenance |
 
 ## When to use what?
 
 ### 1. Use **RestClient** if:
 - You are using **Spring Boot 3.2+**.
 - Your application is **synchronous/blocking** (Standard Spring MVC).
-- You want a clean, modern API with automatic JSON handling via Jackson.
 - *Recommended default for most Spring Boot 3.x web applications.*
 
 ### 2. Use **WebClient** if:
 - You are building a **Reactive application** (Spring WebFlux).
 - You need **non-blocking** performance to handle massive concurrency.
-- You need to perform complex reactive operations (e.g., merging multiple API streams).
-- *Avoid using `.block()` in production unless strictly necessary for legacy integration.*
 
-### 3. Use **Java HttpClient** if:
-- You are working in a **plain Java project** without Spring dependencies.
+### 3. Use **Java 11+ HttpClient** if:
+- You are working in a **plain Java project** (JDK 11+) without Spring dependencies.
 - You want to keep your application **lightweight** with zero external libraries.
-- You need a mix of sync and async calls in a non-Spring environment.
 
-### 4. Use **RestTemplate** (Legacy) if:
+### 4. Use **HttpURLConnection** (Java 8) if:
+- You are forced to work with **legacy Java 8** environments and cannot add external libraries.
+- *Generally avoided in modern development due to verbosity.*
+
+### 5. Use **RestTemplate** (Legacy) if:
 - You are maintaining an **older Spring project** (Boot < 3.2).
 - *Do not use for new projects; it is in maintenance mode.*
 
