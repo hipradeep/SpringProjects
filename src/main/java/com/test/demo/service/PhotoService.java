@@ -12,12 +12,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 @Service
-public class PhotoServiceJava8 {
+public class PhotoService {
 
-    private static final Logger log = LoggerFactory.getLogger(PhotoServiceJava8.class);
+    private static final Logger log = LoggerFactory.getLogger(PhotoService.class);
     private final ObjectMapper objectMapper;
 
-    public PhotoServiceJava8(ObjectMapper objectMapper) {
+    public PhotoService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
