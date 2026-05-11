@@ -9,6 +9,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.ResponseErrorHandler;
+import org.springframework.http.client.ClientHttpResponse;
+import java.io.IOException;
 
 @Service
 public class TodoService {
@@ -17,48 +20,132 @@ public class TodoService {
     private final RestTemplate restTemplate;
 
     public TodoService() {
-        // Step 1: Initialize the legacy RestTemplate.
+        // Initialize the legacy RestTemplate
         this.restTemplate = new RestTemplate();
+        this.restTemplate.setErrorHandler(new CustomResponseErrorHandler());
     }
+
+//    public TodoService(RestTemplateBuilder builder) {
+//        this.restTemplate = builder
+//                .rootUri("https://jsonplaceholder.typicode.com")
+//                .build();
+//    }
 
     public Todo findById(Integer id) {
         log.info("Fetching todo with id {} using RestTemplate (Legacy)", id);
         
-        // Step 2: Define the target URL.
         String url = "https://jsonplaceholder.typicode.com/todos/" + id;
 
-        // Step 3: Create HttpHeaders and set any required custom headers.
+        // Set custom headers
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Source", "Spring-RestTemplate");
         
-        // Step 4: Wrap the headers (and optionally a body) in an HttpEntity object.
+        // Wrap the headers in an HttpEntity
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        // Step 5: Execute the request using the exchange method.
-        // This method allows us to pass the HttpEntity and specify the expected response type.
+        // Execute the request and map response to Todo.class
         ResponseEntity<Todo> response = restTemplate.exchange(url, HttpMethod.GET, entity, Todo.class);
         
-        // Step 6: Extract the deserialized body from the ResponseEntity.
         return response.getBody();
     }
     public Todo createTodo(Todo newTodo) {
         log.info("Creating a new todo using RestTemplate (Legacy POST)");
 
-        // Step 1: Define the target URL for creating a resource.
         String url = "https://jsonplaceholder.typicode.com/todos";
 
-        // Step 2: Create HttpHeaders and set custom headers, e.g., Content-Type.
+        // Set custom headers
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Source", "Spring-RestTemplate-POST");
         headers.set("Content-Type", "application/json");
 
-        // Step 3: Wrap the headers and the body (newTodo object) in an HttpEntity.
+        // Wrap headers and body in an HttpEntity
         HttpEntity<Todo> entity = new HttpEntity<>(newTodo, headers);
 
-        // Step 4: Execute the POST request using exchange (or postForObject).
-        // Here we use postForObject which is a convenient method for POST requests.
+        // Execute the POST request
         Todo createdTodo = restTemplate.postForObject(url, entity, Todo.class);
 
         return createdTodo;
+    }
+
+    public Todo getTodoUsingGetForObject(Integer id) {
+        log.info("Fetching todo using getForObject for id {}", id);
+        String url = "https://jsonplaceholder.typicode.com/todos/" + id;
+        return restTemplate.getForObject(url, Todo.class);
+    }
+
+    public ResponseEntity<Todo> getTodoUsingGetForEntity(Integer id) {
+        log.info("Fetching todo using getForEntity for id {}", id);
+        String url = "https://jsonplaceholder.typicode.com/todos/" + id;
+        return restTemplate.getForEntity(url, Todo.class);
+    }
+
+    public Todo createTodoUsingPostForObject(Todo newTodo) {
+        log.info("Creating todo using postForObject");
+        String url = "https://jsonplaceholder.typicode.com/todos";
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Custom-Header", "Spring-RestTemplate-Exchange-Put");
+        HttpEntity<Todo> entity = new HttpEntity<>(newTodo, headers);
+
+       // return restTemplate.postForObject(url, entity, Todo.class);
+        return restTemplate.postForObject(url, newTodo, Todo.class);
+    }
+
+    public ResponseEntity<Todo> createTodoUsingPostForEntity(Todo newTodo) {
+        log.info("Creating todo using postForEntity");
+        String url = "https://jsonplaceholder.typicode.com/todos";
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Custom-Header", "Spring-RestTemplate-Exchange-Put");
+        HttpEntity<Todo> entity = new HttpEntity<>(newTodo, headers);
+
+         //return restTemplate.postForEntity(url, entity, Todo.class);
+        return restTemplate.postForEntity(url, newTodo, Todo.class);
+    }
+
+    public void updateTodoUsingPut(Integer id, Todo updatedTodo) {
+        log.info("Updating todo using put for id {}", id);
+        String url = "https://jsonplaceholder.typicode.com/todos/" + id;
+        restTemplate.put(url, updatedTodo);
+    }
+
+    public void deleteTodoUsingDelete(Integer id) {
+        log.info("Deleting todo using delete for id {}", id);
+        String url = "https://jsonplaceholder.typicode.com/todos/" + id;
+        restTemplate.delete(url);
+    }
+
+    public ResponseEntity<Todo> executeExchange(Integer id) {
+        log.info("Executing exchange for full control for id {}", id);
+        String url = "https://jsonplaceholder.typicode.com/todos/" + id;
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Custom-Header", "Spring-RestTemplate-Exchange");
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        
+        return restTemplate.exchange(url, HttpMethod.GET, entity, Todo.class);
+    }
+
+    public ResponseEntity<Todo> updateTodoUsingExchange(Integer id, Todo updatedTodo) {
+        log.info("Updating todo using exchange for id {}", id);
+        String url = "https://jsonplaceholder.typicode.com/todos/" + id;
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Custom-Header", "Spring-RestTemplate-Exchange-Put");
+        HttpEntity<Todo> entity = new HttpEntity<>(updatedTodo, headers);
+        
+        return restTemplate.exchange(url, HttpMethod.PUT, entity, Todo.class);
+    }
+
+    private static class CustomResponseErrorHandler implements ResponseErrorHandler {
+
+        @Override
+        public boolean hasError(ClientHttpResponse response) throws IOException {
+            return response.getStatusCode().isError();
+        }
+
+        @Override
+        public void handleError(ClientHttpResponse response) throws IOException {
+            log.error("Response error: {} {}", response.getStatusCode(), response.getStatusText());
+            // Add custom error handling logic here if needed
+        }
     }
 }
