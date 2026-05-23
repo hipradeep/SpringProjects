@@ -20,6 +20,12 @@ import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Note: WebSecurityConfigurerAdapter is now deprecated and has been completely
+ * removed in Spring Security 6.x (Spring Boot 3.x). Spring moved from an
+ * inheritance-based configuration model to a component-based (bean-based)
+ * configuration model.
+ */
 @Configuration
 @EnableWebSecurity
 public class BasicConfiguration extends WebSecurityConfigurerAdapter {
