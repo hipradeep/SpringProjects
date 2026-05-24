@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class Home {
 
     //http://localhost:8080/
-    @RequestMapping("/")
+    @RequestMapping("/public")
     public String helloGFG()
     {
         return "Hello Pradeep";

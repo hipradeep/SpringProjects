@@ -17,7 +17,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         String[] permitAllUrls = {"/public/**"};
-        String[] authenticatedUrls = {"/welcome", "/profile/**"};
+        String[] authenticatedUrls = {"/welcome", "/profile/**", "/api/login"};
         String[] userRoleUrls = {"/home/premium", "/user/**"};
         String[] adminRoleUrls = {"/home/trunk", "/admin/**"};
 
