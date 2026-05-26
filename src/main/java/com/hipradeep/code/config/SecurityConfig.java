@@ -1,43 +1,85 @@
 package com.hipradeep.code.config;
 
-import jakarta.servlet.http.HttpServletResponse;
+import com.hipradeep.code.entity.UserEntity;
+import com.hipradeep.code.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Autowired
+    private UserRepository repo;
 
-        String[] permitAllUrls = {"/public/**"};
-        String[] authenticatedUrls = {"/welcome", "/profile/**", "/api/login"};
-        String[] userRoleUrls = {"/home/premium", "/user/**"};
-        String[] adminRoleUrls = {"/home/trunk", "/admin/**"};
+    @Bean
+    public UserDetailsService userDetailsService() {
+
+        return username -> {
+
+            UserEntity user = repo.findByUsername(username)
+                    .orElseThrow(() ->
+                        new UsernameNotFoundException("User Not Found")
+                    );
+
+            return User.builder()
+                    .username(user.getUsername())
+                    .password(user.getPassword())
+                    .roles("USER")
+                    .build();
+        };
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager() {
+
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider();
+
+        provider.setUserDetailsService(
+                userDetailsService()
+        );
+
+        provider.setPasswordEncoder(
+                passwordEncoder()
+        );
+
+        return new ProviderManager(provider);
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http) throws Exception {
 
         http
-                .csrf(csrf -> csrf.disable()) // Typically disabled for APIs
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(permitAllUrls).permitAll()             // All these URLs are allowed without auth
-                        .requestMatchers(authenticatedUrls).authenticated()     // Auth required for these URLs
-                        .requestMatchers(userRoleUrls).hasRole("USER")          // USER role required for these URLs
-                        .requestMatchers(adminRoleUrls).hasRole("ADMIN")        // ADMIN role required for these URLs
-                        .anyRequest().denyAll()
-                )
-                .httpBasic(Customizer.withDefaults()) // Enable HTTP Basic Authentication
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            // Send 401 Unauthorized instead of redirect
-                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
-                        })
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)); // No sessions
+            .csrf(csrf -> csrf.disable())
+
+            .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/login")
+                    .permitAll()
+                    .anyRequest()
+                    .authenticated()
+            )
+
+            .formLogin(Customizer.withDefaults());
 
         return http.build();
     }
