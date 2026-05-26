@@ -1,6 +1,6 @@
-# Stateful Form-Based Login Security Flow
+# Stateful Form-Based Login Security Flow (Direct Route Mapping)
 
-This document details the active, production-ready stateful form-based authentication flow implemented on this branch, explaining how it manages user identity using HTTP Sessions and secure browser cookies.
+This document details the active, production-ready stateful form-based authentication flow implemented on this branch, explaining how it manages user identity using HTTP Sessions and secure browser cookies, rendering the greeting directly on the root landing URL.
 
 ---
 
@@ -21,7 +21,7 @@ sequenceDiagram
     participant PasswordEncoder
     participant SecurityContextRepository
 
-    Browser->>SecurityFilterChain: GET /welcome (Unauthenticated)
+    Browser->>SecurityFilterChain: GET / (Unauthenticated)
     SecurityFilterChain-->>Browser: Redirect to GET /login (Spring Security default page)
     
     Browser->>UsernamePasswordAuthenticationFilter: POST /login (username, password fields)
@@ -35,17 +35,17 @@ sequenceDiagram
     SecurityContextRepository-->>Browser: Set JSESSIONID Cookie & Redirect to / (Root)
     
     Browser->>SecurityFilterChain: GET / (with JSESSIONID Cookie)
-    SecurityFilterChain->>Browser: Redirect to GET /welcome (Protected)
+    SecurityFilterChain->>Browser: Route to controller endpoint (/)
 ```
 
 ### Steps in Detail
-1. **Unauthenticated Check**: The browser requests a protected endpoint. Spring Security intercepts the call and redirects the client to the generated sign-in form path `/login`.
+1. **Unauthenticated Check**: The browser requests the root landing path `/`. Spring Security intercepts the call and redirects the client to the generated sign-in form path `/login`.
 2. **Credentials POST**: The user submits the HTML form, issuing a `POST /login` containing `username` and `password` parameters as form-encoded fields (`application/x-www-form-urlencoded`).
 3. **Filter Interception**: Spring Security's native `UsernamePasswordAuthenticationFilter` intercepts the request.
 4. **User Lookup & Match**: The filter calls `UserDetailsService` to fetch the user from PostgreSQL and validates the password hash using the `BCryptPasswordEncoder` bean.
 5. **Session Bind**: Upon success, a `SecurityContext` is created, bound to a stateful `HttpSession`, and saved in the HTTP session repository.
 6. **Cookie Response**: The server issues a `JSESSIONID` cookie in the HTTP headers and redirects the client to the root path (`/`).
-7. **Landing Redirect**: The `/` path redirects the authenticated browser session directly to `/welcome`.
+7. **Direct Rendering**: Because `/` is mapped directly to the greeting endpoint, the server directly renders `"Welcome, <username>!"` to the browser without any extra HTTP 302 redirections.
 
 ---
 
@@ -71,7 +71,7 @@ sequenceDiagram
 ```
 
 ### Steps in Detail
-1. **Cookie Inspection**: The browser automatically attaches the `JSESSIONID` session cookie to the headers of the outgoing request to `/welcome`.
+1. **Cookie Inspection**: The browser automatically attaches the `JSESSIONID` session cookie to the headers of the outgoing request to `/welcome` (or `/`).
 2. **Session Retrieval**: Spring Security's `SecurityContextHolderFilter` reads the cookie, fetches the corresponding `HttpSession` from memory, and populates the `SecurityContextHolder`.
 3. **Route Allowed**: Spring Security recognizes the user is successfully authenticated and routes the request downstream to the controller.
 4. **Name Extraction**: `AuthController.welcome()` extracts the username directly from the injected `Authentication` session principal and returns the greeting.
@@ -123,20 +123,14 @@ public class SecurityConfig {
 }
 ```
 
-### B. MVC Root Redirect & Welcome Controller
+### B. MVC Welcome Controller (No Redirection)
 ```java
 @RestController
 public class AuthController {
 
-    @GetMapping("/")
-    public void redirectToWelcome(HttpServletResponse response) throws IOException {
-        // Redirect successful login landing requests to the protected welcome endpoint
-        response.sendRedirect("/welcome");
-    }
-
-    @GetMapping("/welcome")
+    @GetMapping({"/", "/welcome"})
     public String welcome(Authentication authentication) {
-        // Extract the username statefully from the Spring Security session context
+        // Extract the username statelessly from the Spring Security session context
         return "Welcome, " + authentication.getName() + "!";
     }
 }
@@ -148,6 +142,6 @@ public class AuthController {
 
 | Pros | Cons |
 | :--- | :--- |
-| **Out-of-the-box browser friendliness**: Browsers automatically manage session cookies, making it perfect for standard monoliths/MVC apps. | **Stateful scaling bottleneck**: Requires server memory to store HTTP sessions (or centralized sessions like Spring Session Redis). |
-| **0 Custom Security Boilerplate**: No filters, claims signing, or JWT token builders to configure or maintain. | Susceptible to Cross-Site Request Forgery (CSRF) unless CSRF protection is enabled. |
-| Automatic support for standard redirects, logout, session expiration, and concurrent logins. | Less suited for decoupled microservice architectures or distributed APIs. |
+| **0 Extra HTTP 302 Redirections**: Renders the landing screen immediately after form login succeeds. | **Stateful scaling bottleneck**: Requires server memory to store HTTP sessions (or centralized sessions like Spring Session Redis). |
+| **Out-of-the-box browser friendliness**: Browsers automatically manage session cookies, making it perfect for standard monoliths/MVC apps. | Susceptible to Cross-Site Request Forgery (CSRF) unless CSRF protection is enabled. |
+| **0 Custom Security Boilerplate**: No filters, claims signing, or JWT token builders to configure or maintain. | Less suited for decoupled microservice architectures or distributed APIs. |

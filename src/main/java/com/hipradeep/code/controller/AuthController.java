@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class AuthController {
 
-    @GetMapping("/welcome")
+    @GetMapping({"/", "/welcome"})
     public String welcome(Authentication authentication) {
         // Extract the username statefully from the Spring Security session context
         return "Welcome, " + authentication.getName() + "!";
