@@ -1,12 +1,12 @@
-# Pure Stateless JWT Security Flow (No DB Hits, Direct Controller Auth)
+# Pure Stateless JWT Security Flow (No DB Hits, Custom Authentication Flow)
 
-This document details the optimized architectural flow for programmatically authenticating users and validating subsequent requests statelessly in our Spring Security configuration, avoiding both database calls, form login redirects, and authentication manager boilerplates.
+This document details the optimized architectural flow for programmatically authenticating users and validating subsequent requests statelessly in our Spring Security configuration, avoiding database calls and form login redirects on protected paths.
 
 ---
 
 ## 1. Login & Token Issuance Flow
 
-This flow executes when a client authenticates by sending their credentials to the custom POST `/login` endpoint. It performs direct repository checks and bypasses the heavy `AuthenticationManager` and `SecurityContextHolder` during login.
+This flow executes when a client authenticates by sending credentials to `/login`. It validates credentials using Spring Security's standard `AuthenticationManager` bean.
 
 ### Flow Diagram
 
@@ -15,30 +15,39 @@ sequenceDiagram
     autonumber
     actor Client
     participant AuthController
-    participant UserRepository
+    participant AuthenticationManager
+    participant DaoAuthenticationProvider
+    participant UserDetailsService
     participant DB as PostgreSQL DB
     participant PasswordEncoder
     participant JwtService
 
     Client->>AuthController: POST /login (username, password)
-    AuthController->>UserRepository: findByUsername(username)
-    UserRepository->>DB: Query UserEntity
-    DB-->>UserRepository: Return UserEntity
-    UserRepository-->>AuthController: Return UserEntity (or empty)
-    AuthController->>PasswordEncoder: matches(rawPassword, encodedPassword)
-    PasswordEncoder-->>AuthController: Return true (credentials valid)
+    AuthController->>AuthenticationManager: authenticate(Token)
+    AuthenticationManager->>DaoAuthenticationProvider: authenticate(Token)
+    DaoAuthenticationProvider->>UserDetailsService: loadUserByUsername(username)
+    UserDetailsService->>DB: findByUsername(username)
+    DB-->>UserDetailsService: return UserEntity
+    UserDetailsService-->>DaoAuthenticationProvider: return UserDetails (Spring Security User)
+    DaoAuthenticationProvider->>PasswordEncoder: matches(rawPassword, encodedPassword)
+    PasswordEncoder-->>DaoAuthenticationProvider: return true (matches)
+    DaoAuthenticationProvider-->>AuthenticationManager: return Authenticated Principal
+    AuthenticationManager-->>AuthController: return Authentication object
     AuthController->>JwtService: generateToken(username)
-    JwtService-->>AuthController: Return signed JWT
-    AuthController-->>Client: Return JSON response {"token": "...", "status": "LOGIN SUCCESS"}
+    JwtService-->>AuthController: return signed JWT string
+    AuthController-->>Client: return JSON response {"token": "...", "status": "SUCCESS"}
 ```
 
 ### Steps in Detail
 1. **Request Submission**: The client sends a `POST` request to `/login` containing the `username` and `password` inside a JSON body.
-2. **JPA Lookup**: `AuthController` receives the request and directly calls `UserRepository.findByUsername(username)` to query the database.
-3. **Database Fetch**: The repository retrieves the `UserEntity` from the PostgreSQL database.
-4. **Password Match**: `AuthController` uses `BCryptPasswordEncoder.matches()` to verify the raw password hash against the stored database hash.
-5. **JWT Issuance**: Upon successful verification, the controller invokes `JwtService.generateToken()` to construct and sign a new JWT token.
-6. **Stateless Response**: The signed token is returned back to the client in a JSON payload. No session is created, and the `SecurityContextHolder` is **not** mutated during login.
+2. **Controller Interception**: The `AuthController` receives the `LoginRequest` DTO and wraps the credentials into an unauthenticated `UsernamePasswordAuthenticationToken`.
+3. **Manager Delegation**: `AuthenticationManager` (configured as a `ProviderManager`) receives the token and forwards it to the registered `DaoAuthenticationProvider`.
+4. **User Retrieval**: The provider requests user details from the custom `UserDetailsService` bean.
+5. **Database Query**: `UserDetailsService` queries the PostgreSQL database via `UserRepository` searching for a matching `UserEntity`.
+6. **Password Verification**: The provider uses `BCryptPasswordEncoder` to match the raw incoming password against the database-stored hashed password.
+7. **Security Context Creation**: Upon successful match, an authenticated principal is returned up to the `AuthController`.
+8. **JWT Generation**: `AuthController` invokes the `JwtService` to construct and HMAC-SHA256 sign a new JWT token containing the username as the subject.
+9. **JSON Response**: The signed token is returned back to the client in a JSON map.
 
 ---
 

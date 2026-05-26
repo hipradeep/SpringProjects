@@ -1,34 +1,40 @@
-# Stateless JWT Authentication Flow (Zero DB Hits, Direct Controller Auth) - Crispy Notes
+# Stateless JWT Authentication Flow (Zero DB Hits, Custom Authentication Flow) - Crispy Notes
 
-This document details the active, production-ready stateless authentication flow implemented in this codebase, explaining how it enables zero database reads for request validation and bypasses traditional Spring Security configuration boilerplate by executing validation directly inside the MVC controller layer.
+This document details the active, production-ready stateless authentication flow implemented in this codebase, explaining how it enables zero database reads for request validation and validates user credentials programmatically using Spring Security's standard `AuthenticationManager` bean.
 
 ---
 
 ## 1. Architectural Flows
 
 ### A. Login & Token Issuance Flow
-This flow executes when a client authenticates by sending credentials to `/login`. It performs direct database checks and completely bypasses the `AuthenticationManager` and `SecurityContextHolder`.
+This flow executes when a client authenticates by sending credentials to `/login`. It verifies credentials programmatically via the `AuthenticationManager` bean.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Client
     participant AuthController
-    participant UserRepository
+    participant AuthenticationManager
+    participant DaoAuthenticationProvider
+    participant UserDetailsService
     participant DB as PostgreSQL DB
     participant PasswordEncoder
     participant JwtService
 
     Client->>AuthController: POST /login (username, password)
-    AuthController->>UserRepository: findByUsername(username)
-    UserRepository->>DB: Query UserEntity
-    DB-->>UserRepository: Return UserEntity
-    UserRepository-->>AuthController: Return UserEntity (or empty)
-    AuthController->>PasswordEncoder: matches(rawPassword, encodedPassword)
-    PasswordEncoder-->>AuthController: Return true (credentials valid)
+    AuthController->>AuthenticationManager: authenticate(Token)
+    AuthenticationManager->>DaoAuthenticationProvider: authenticate(Token)
+    DaoAuthenticationProvider->>UserDetailsService: loadUserByUsername(username)
+    UserDetailsService->>DB: findByUsername(username)
+    DB-->>UserDetailsService: return UserEntity
+    UserDetailsService-->>DaoAuthenticationProvider: return UserDetails (Spring Security User)
+    DaoAuthenticationProvider->>PasswordEncoder: matches(rawPassword, encodedPassword)
+    PasswordEncoder-->>DaoAuthenticationProvider: return true (matches)
+    DaoAuthenticationProvider-->>AuthenticationManager: return Authenticated Principal
+    AuthenticationManager-->>AuthController: return Authentication object
     AuthController->>JwtService: generateToken(username)
-    JwtService-->>AuthController: Return signed JWT
-    AuthController-->>Client: Return JSON response {"token": "...", "status": "LOGIN SUCCESS"}
+    JwtService-->>AuthController: return signed JWT string
+    AuthController-->>Client: return JSON response {"token": "...", "status": "SUCCESS"}
 ```
 
 ---
@@ -149,19 +155,59 @@ public class JwtFilter extends OncePerRequestFilter {
 
 ---
 
-### C. Truly RESTful Minimal Security Configuration
-Disables stateful features (like CSRF, cookies, and standard generated sign-in forms) and registers the custom JWT filter, requiring zero custom managers, providers, or user details services:
+### C. Truly RESTful Custom Security Configuration
+Disables stateful features (like CSRF, cookies, and standard generated sign-in forms) and registers the custom JWT filter and programmatically maps the standard `AuthenticationManager` bean:
 ```java
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     @Autowired
+    private UserRepository repo;
+
+    @Autowired
     private JwtFilter jwtFilter;
+
+    @Bean
+    public UserDetailsService userDetailsService() {
+
+        return username -> {
+
+            UserEntity user = repo.findByUsername(username)
+                    .orElseThrow(() ->
+                        new UsernameNotFoundException(
+                            "User Not Found"
+                        )
+                    );
+
+            return User.builder()
+                    .username(user.getUsername())
+                    .password(user.getPassword())
+                    .roles("USER")
+                    .build();
+        };
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager() {
+
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider();
+
+        provider.setUserDetailsService(
+                userDetailsService()
+        );
+
+        provider.setPasswordEncoder(
+                passwordEncoder()
+        );
+
+        return new ProviderManager(provider);
     }
 
     @Bean
@@ -196,36 +242,35 @@ public class SecurityConfig {
 
 ---
 
-### D. Direct JWT Issuance & Verification Controller
-Validates user credentials directly using the injected JPA repository and password encoder, completely bypassing the heavy Spring Security pipeline and returning standard REST responses:
+### D. JWT Issuance & Verification Controller
+Validates user credentials programmatically using Spring Security's standard `AuthenticationManager` bean and returns signed JWT access tokens:
 ```java
 @RestController
 public class AuthController {
 
     @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private AuthenticationManager authManager;
 
     @Autowired
     private JwtService jwtService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest req) {
-        Optional<UserEntity> userOpt = userRepository.findByUsername(req.getUsername());
+    public Map<String, String> login(
+            @RequestBody LoginRequest req) {
 
-        // Statelessly verify credentials and match hashed password
-        if (userOpt.isEmpty() || !passwordEncoder.matches(req.getPassword(), userOpt.get().getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Bad credentials"));
-        }
+        Authentication authentication =
+                authManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                        req.getUsername(),
+                        req.getPassword()
+                    )
+                );
 
         String token = jwtService.generateToken(req.getUsername());
         Map<String, String> response = new HashMap<>();
         response.put("token", token);
         response.put("status", "LOGIN SUCCESS");
-        return ResponseEntity.ok(response);
+        return response;
     }
 
     @GetMapping("/welcome")
@@ -244,5 +289,5 @@ public class AuthController {
 | :--- | :--- |
 | **0 Database Hits** on all request mappings (yielding high throughput). | Token revocation requires storing a stateless blocklist (e.g. in Redis). |
 | True REST design (no cookies or form login redirections). | Requires client application to store the token (e.g. in local storage). |
-| **Highly readable and minimal boilerplate** (removes AuthenticationManagers/UserDetailsService beans). | Bypass built-in Spring Security event logging or complex default login events. |
+| Standard robust Spring Security pipeline configured during `/login` phase. | More configuration classes to maintain compared to direct JPA logins. |
 | Perfect for highly scaled REST microservices and SPAs. | Crypographic secret key must be rotated and managed securely. |
