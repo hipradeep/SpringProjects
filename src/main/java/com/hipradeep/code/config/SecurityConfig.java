@@ -1,16 +1,9 @@
 package com.hipradeep.code.config;
 
-import com.hipradeep.code.entity.UserEntity;
-import com.hipradeep.code.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -18,29 +11,6 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
-    @Autowired
-    private UserRepository repo;
-
-    @Bean
-    public UserDetailsService userDetailsService() {
-
-        return username -> {
-
-            UserEntity user = repo.findByUsername(username)
-                    .orElseThrow(() ->
-                        new UsernameNotFoundException(
-                            "User Not Found"
-                        )
-                    );
-
-            return User.builder()
-                    .username(user.getUsername())
-                    .password(user.getPassword())
-                    .roles("USER")
-                    .build();
-        };
-    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -55,12 +25,25 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // Keeping CSRF disabled for easier curl/postman testing
 
             .authorizeHttpRequests(auth -> auth
-                    .anyRequest()
-                    .authenticated()
+                    .requestMatchers("/login", "/css/**", "/js/**", "/images/**").permitAll()
+                    .anyRequest().authenticated()
             )
 
-            .formLogin(Customizer.withDefaults()); // Enable standard Form-Based Login redirect and processing
+            .formLogin(form -> form
+                    .loginPage("/login")
+                    .loginProcessingUrl("/login")
+                    .defaultSuccessUrl("/welcome", true)
+                    .failureUrl("/login?error=true")
+                    .permitAll()
+            )
+
+            .logout(logout -> logout
+                    .logoutUrl("/logout")
+                    .logoutSuccessUrl("/login?logout=true")
+                    .permitAll()
+            );
 
         return http.build();
     }
 }
+
