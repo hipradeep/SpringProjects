@@ -25,13 +25,10 @@ public class AuthController {
     public Map<String, String> login(
             @RequestBody LoginRequest req) {
 
-        Authentication authentication =
-                authManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                        req.getUsername(),
-                        req.getPassword()
-                    )
-                );
+     Authentication unAuth= new UsernamePasswordAuthenticationToken(   req.getUsername(),
+                req.getPassword()
+        );
+        Authentication authentication =authManager.authenticate(unAuth);
 
         String token = jwtService.generateToken(req.getUsername());
         Map<String, String> response = new HashMap<>();

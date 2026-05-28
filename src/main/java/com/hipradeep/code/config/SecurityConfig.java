@@ -61,40 +61,38 @@ public class SecurityConfig {
     @Bean
     @ConditionalOnProperty(name = "security.auth.type", havingValue = "jdbc")
     public UserDetailsService userDetailsService() {
-            return username -> {
-                UserEntity user = repo.findByUsername(username)
-                        .orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
+        return username -> {
+            UserEntity user = repo.findByUsername(username)
+                    .orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
 
-                return User.builder()
-                        .username(user.getUsername())
-                        .password(user.getPassword())
-                        .roles("USER")
-                        .build();
-            };
-        }
+            return User.builder()
+                    .username(user.getUsername())
+                    .password(user.getPassword())
+                    .roles("USER")
+                    .build();
+        };
+    }
 
-    // 3. Custom UserDetailsService (CustomUDS3)
     @Bean
-    @ConditionalOnProperty(name = "security.auth.type", havingValue = "custom")
-    public UserDetailsService customUserDetailsService(UserRepository userRepository) {
-        return new CustomUserDetailsService(userRepository);
+    @ConditionalOnProperty(name = "security.auth.type", havingValue = "jdbc")
+    public UserDetailsService customDetailsService() {
+
+        return username -> {
+            UserEntity user = repo.findByUsername(username)
+                    .orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
+            return new CustomUserDetails(user);
+        };
     }
 
     // 4. Default AuthenticationProvider (UDS-based DaoAuthenticationProvider)
     @Bean
     @ConditionalOnProperty(name = "security.provider.type", havingValue = "default", matchIfMissing = true)
-    public AuthenticationProvider defaultAuthenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+    public AuthenticationProvider defaultAuthenticationProvider(UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
         return provider;
-    }
-
-    // 5. Custom AuthenticationProvider (Custom Credential Validation)
-    @Bean
-    @ConditionalOnProperty(name = "security.provider.type", havingValue = "custom")
-    public AuthenticationProvider customAuthenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
-        return new CustomAuthenticationProvider(userDetailsService, passwordEncoder);
     }
 
     // 6. Default AuthenticationManager (Standard Spring ProviderManager)
@@ -104,14 +102,6 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    // 7. Custom AuthenticationManager (Delegator to active AuthenticationProvider)
-    @Bean
-    @ConditionalOnProperty(name = "security.manager.type", havingValue = "custom")
-    public AuthenticationManager customAuthenticationManager(AuthenticationProvider authenticationProvider) {
-        return new CustomAuthenticationManager(authenticationProvider);
-    }
-
-
     // 8. BCrypt PasswordEncoder (BCrypt Strong Hashing)
     @Bean
     @ConditionalOnProperty(name = "security.encoder.type", havingValue = "bcrypt", matchIfMissing = true)
@@ -119,77 +109,29 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // 9. SHA-2 PasswordEncoder (SHA-256 Cryptographic Hash)
-    @Bean
-    @ConditionalOnProperty(name = "security.encoder.type", havingValue = "sha2")
-    public PasswordEncoder sha2PasswordEncoder() {
-        return new PasswordEncoder() {
-            @Override
-            public String encode(CharSequence rawPassword) {
-                try {
-                    MessageDigest digest = MessageDigest.getInstance("SHA-256");
-                    byte[] hash = digest.digest(rawPassword.toString().getBytes(StandardCharsets.UTF_8));
-                    StringBuilder hexString = new StringBuilder();
-                    for (byte b : hash) {
-                        String hex = Integer.toHexString(0xff & b);
-                        if (hex.length() == 1) hexString.append('0');
-                        hexString.append(hex);
-                    }
-                    return hexString.toString();
-                } catch (NoSuchAlgorithmException e) {
-                    throw new RuntimeException("SHA-256 algorithm not found", e);
-                }
-            }
-
-            @Override
-            public boolean matches(CharSequence rawPassword, String encodedPassword) {
-                return encode(rawPassword).equalsIgnoreCase(encodedPassword);
-            }
-        };
-    }
-
-    // 10. NoOp PasswordEncoder (Plaintext Matcher)
-    @Bean
-    @ConditionalOnProperty(name = "security.encoder.type", havingValue = "noop")
-    public PasswordEncoder noopPasswordEncoder() {
-        return new PasswordEncoder() {
-            @Override
-            public String encode(CharSequence rawPassword) {
-                return rawPassword.toString();
-            }
-            @Override
-            public boolean matches(CharSequence rawPassword, String encodedPassword) {
-                return rawPassword.toString().equals(encodedPassword);
-            }
-        };
-    }
-
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http) throws Exception {
 
         http
-            .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable())
 
-            .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/login")
-                    .permitAll()
-                    .anyRequest()
-                    .authenticated()
-            )
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/login")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated())
 
-            .exceptionHandling(ex -> ex
-                    .authenticationEntryPoint((request, response, authException) -> {
-                        // Send 401 Unauthorized instead of standard redirect
-                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
-                    })
-            )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // Send 401 Unauthorized instead of standard redirect
+                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                        }))
 
-            .sessionManagement(session -> session
-                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
