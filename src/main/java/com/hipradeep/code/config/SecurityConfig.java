@@ -19,14 +19,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 @EnableWebSecurity
@@ -107,6 +107,19 @@ public class SecurityConfig {
     @ConditionalOnProperty(name = "security.encoder.type", havingValue = "bcrypt", matchIfMissing = true)
     public PasswordEncoder bcryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    // 11. Delegating PasswordEncoder (Supports multiple formats dynamically)
+    @Bean
+    @ConditionalOnProperty(name = "security.encoder.type", havingValue = "delegating")
+    public PasswordEncoder delegatingPasswordEncoder() {
+        String idForEncode = "bcrypt";
+        Map<String, PasswordEncoder> encoders = new HashMap<>();
+        encoders.put("bcrypt", new BCryptPasswordEncoder());
+        encoders.put("sha2", new Sha256PasswordEncoder());
+        encoders.put("noop", new NoOpPasswordEncoder());
+
+        return new DelegatingPasswordEncoder(idForEncode, encoders);
     }
 
     @Bean
