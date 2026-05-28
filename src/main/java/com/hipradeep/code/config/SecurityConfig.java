@@ -24,29 +24,25 @@ public class SecurityConfig {
             AuthenticationManager authManager) throws Exception {
 
         http
-            .authenticationManager(authManager)
-            .csrf(csrf -> csrf.disable()) // Keeping CSRF disabled for easier curl/postman testing
+                .authenticationManager(authManager)
+                .csrf(csrf -> csrf.disable()) // Keeping CSRF disabled for easier curl/postman testing
 
-            .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/login", "/css/**", "/js/**", "/images/**").permitAll()
-                    .anyRequest().authenticated()
-            )
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/login", "/css/**", "/js/**", "/images/**").permitAll()
+                        .anyRequest().authenticated())
 
-            .formLogin(form -> form
-                    .loginPage("/login")
-                    .loginProcessingUrl("/login")
-                    .defaultSuccessUrl("/welcome", true)
-                    .failureUrl("/login?error=true")
-                    .permitAll()
-            )
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .loginProcessingUrl("/login")
+                        .defaultSuccessUrl("/welcome", true)
+                        .failureUrl("/login?error=true")
+                        .permitAll())
 
-            .logout(logout -> logout
-                    .logoutUrl("/logout")
-                    .logoutSuccessUrl("/login?logout=true")
-                    .permitAll()
-            );
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/login?logout=true")
+                        .permitAll());
 
         return http.build();
     }
 }
-
