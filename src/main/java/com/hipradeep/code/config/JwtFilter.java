@@ -9,12 +9,17 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.GrantedAuthority;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
@@ -45,16 +50,22 @@ public class JwtFilter extends OncePerRequestFilter {
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             // Statelessly validate the token without performing database reads
             if (!jwtService.isTokenExpired(jwt)) {
-                UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
+                List<String> roles = jwtService.extractAuthorities(jwt);
+                List<GrantedAuthority> authorities = roles == null ? Collections.emptyList() :
+                        roles.stream()
+                             .map(SimpleGrantedAuthority::new)
+                             .collect(Collectors.toList());
+
+                UserDetails userDetails = User.builder()
                         .username(username)
                         .password("") // Password is not required for stateless context
-                        .authorities(Collections.emptyList()) // No RBAC roles required
+                        .authorities(authorities)
                         .build();
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
-                        Collections.emptyList()
+                        authorities
                 );
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)

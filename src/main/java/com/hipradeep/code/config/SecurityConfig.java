@@ -19,9 +19,16 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import com.hipradeep.code.entity.RoleEntity;
+import java.util.List;
+import java.util.Set;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(securedEnabled = true, jsr250Enabled = true)
 public class SecurityConfig {
 
     @Autowired
@@ -42,10 +49,29 @@ public class SecurityConfig {
                         )
                     );
 
+            List<GrantedAuthority> authorities;
+            boolean isAdmin = user.getRoles().stream()
+                    .anyMatch(r -> "ROLE_ADMIN".equalsIgnoreCase(r.getName()));
+
+            if (isAdmin) {
+                authorities = List.of(
+                        new SimpleGrantedAuthority("ROLE_ADMIN"),
+                        new SimpleGrantedAuthority("ROLE_USER"),
+                        new SimpleGrantedAuthority("OP_READ"),
+                        new SimpleGrantedAuthority("OP_WRITE"),
+                        new SimpleGrantedAuthority("OP_DELETE")
+                );
+            } else {
+                authorities = List.of(
+                        new SimpleGrantedAuthority("ROLE_USER"),
+                        new SimpleGrantedAuthority("OP_READ")
+                );
+            }
+
             return User.builder()
                     .username(user.getUsername())
                     .password(user.getPassword())
-                    .roles("USER")
+                    .authorities(authorities)
                     .build();
         };
     }
@@ -80,10 +106,12 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
 
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/login")
-                    .permitAll()
-                    .anyRequest()
-                    .authenticated()
+                    .requestMatchers("/login", "/api/public/**").permitAll()
+                    .requestMatchers("/api/admin/**").hasRole("ADMIN") // Role-Based Path Security
+                    .requestMatchers("/api/delete/**").hasAuthority("OP_DELETE") // Permission-Based Path Security
+                    .requestMatchers("/api/private/**").authenticated()
+                    .requestMatchers("/api/restricted/**").denyAll()
+                    .anyRequest().authenticated()
             )
 
             .exceptionHandling(ex -> ex
