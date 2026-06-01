@@ -1,7 +1,8 @@
 package com.hipradeep.code;
 
 import com.hipradeep.code.model.PrefixedEntity;
-import com.hipradeep.code.repository.HsttBankMstRepository;
+import com.hipradeep.code.model.Bank;
+import com.hipradeep.code.repository.BankRepository;
 import com.hipradeep.code.repository.PrefixedEntityRepository;
 import com.hipradeep.code.repository.ProductRepository;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ class SpringProjectsApplicationTests {
 	private ProductRepository productRepository;
 
 	@Autowired
-	private HsttBankMstRepository bankRepository;
+	private BankRepository bankRepository;
 
 	@Autowired
 	private PrefixedEntityRepository prefixedEntityRepository;
@@ -78,44 +79,31 @@ class SpringProjectsApplicationTests {
 	}
 
 	@Test
-	void testDvdmsBankRESTEndpoints() throws Exception {
-		// 1. Create HsttBankMst entity
-		String bankJson = "{\"gnumHospitalCode\":100,\"gstrBankName\":\"State Bank of Assam\",\"gstrBankShortName\":\"SBA\",\"gnumIsvalid\":1}";
+	void testBankRESTEndpoints() throws Exception {
+		// 1. Create Bank entity
+		String bankJson = "{\"bankName\":\"State Bank of Assam\",\"bankShortName\":\"SBA\"}";
 
 		mockMvc.perform(post("/api/banks")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(bankJson))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.gnumBankId", is(1001))) // Initial sequence value is coalesce(max, 1000)+1 -> 1001
-				.andExpect(jsonPath("$.gnumHospitalCode", is(100)))
-				.andExpect(jsonPath("$.gstrBankName", is("State Bank of Assam")));
+				.andExpect(jsonPath("$.bankId", is(1001))) // Initial sequence value is coalesce(max, 1000)+1 -> 1001
+				.andExpect(jsonPath("$.bankName", is("State Bank of Assam")));
 
-		// 2. Create second bank with same hospital code to assert NamedQuery max() sequence increment
-		String secondBankJson = "{\"gnumHospitalCode\":100,\"gstrBankName\":\"Assam Regional Bank\",\"gstrBankShortName\":\"ARB\",\"gnumIsvalid\":1}";
+		// 2. Create second bank to assert NamedQuery max() sequence increment
+		String secondBankJson = "{\"bankName\":\"Assam Regional Bank\",\"bankShortName\":\"ARB\"}";
 
 		mockMvc.perform(post("/api/banks")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(secondBankJson))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.gnumBankId", is(1002))) // Incremented sequence value
-				.andExpect(jsonPath("$.gnumHospitalCode", is(100)))
-				.andExpect(jsonPath("$.gstrBankName", is("Assam Regional Bank")));
+				.andExpect(jsonPath("$.bankId", is(1002))) // Incremented sequence value
+				.andExpect(jsonPath("$.bankName", is("Assam Regional Bank")));
 
-		// 3. Create a bank with a DIFFERENT hospital code (HQL NamedQuery scopes by hospital code!)
-		String thirdBankJson = "{\"gnumHospitalCode\":200,\"gstrBankName\":\"Guwahati Merchant Bank\",\"gstrBankShortName\":\"GMB\",\"gnumIsvalid\":1}";
-
-		mockMvc.perform(post("/api/banks")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(thirdBankJson))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.gnumBankId", is(1001))) // Starts at 1001 since gnumHospitalCode 200 has no previous records!
-				.andExpect(jsonPath("$.gnumHospitalCode", is(200)))
-				.andExpect(jsonPath("$.gstrBankName", is("Guwahati Merchant Bank")));
-
-		// 4. List all banks
+		// 3. List all banks
 		mockMvc.perform(get("/api/banks"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(3))));
+				.andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(2))));
 	}
 
 	@Test
