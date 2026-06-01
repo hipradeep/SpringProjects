@@ -5,6 +5,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -64,4 +65,11 @@ public class DemoController {
     public String rolesAllowed(Authentication authentication) {
         return "RolesAllowed: Access Granted for ADMIN. User: " + authentication.getName();
     }
+
+    @GetMapping("/users/{id}")
+    @PreAuthorize("hasRole('ADMIN') OR @userService.isResourceOwner(#id, authentication.name)")
+    public String getUserDetails(@PathVariable Long id, Authentication authentication) {
+        return "Access Granted for user resource with ID " + id + ". Accessed by " + authentication.getName();
+    }
 }
+
