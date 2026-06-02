@@ -15,7 +15,7 @@ public class SnowflakeIdentifierGenerator implements IdentifierGenerator {
     private static final SnowflakeIdGenerator GENERATOR = new SnowflakeIdGenerator(1, 1);
 
     @Override
-    public Serializable generate(SharedSessionContractImplementor session, Object object) throws HibernateException {
+    public Object generate(SharedSessionContractImplementor session, Object object) throws HibernateException {
         return GENERATOR.nextId();
     }
 }

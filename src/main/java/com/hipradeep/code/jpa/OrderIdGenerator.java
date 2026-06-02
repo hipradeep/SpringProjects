@@ -2,36 +2,33 @@ package com.hipradeep.code.jpa;
 
 import com.hipradeep.code.model.Order;
 import org.hibernate.HibernateException;
-import org.hibernate.MappingException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
-import org.hibernate.id.Configurable;
 import org.hibernate.id.IdentifierGenerator;
-import org.hibernate.service.ServiceRegistry;
-import org.hibernate.type.Type;
+import org.hibernate.generator.AnnotationBasedGenerator;
+import org.hibernate.generator.GeneratorCreationContext;
 
-import java.io.Serializable;
-import java.util.Properties;
+import java.lang.reflect.Member;
 
 /**
  * Custom Hibernate Identifier Generator generating a prefixed ID:
- * - Prefix configured dynamically from the Entity's @GenericGenerator annotations.
+ * - Prefix configured dynamically from the Entity's @OrderIdGeneration annotations.
  * - Last 4 digits of the itemId.
  * - 2-digit sequence incrementing from 00 to 99 for that specific item.
  */
-public class OrderIdGenerator implements IdentifierGenerator, Configurable {
+public class OrderIdGenerator implements IdentifierGenerator, AnnotationBasedGenerator<OrderIdGeneration> {
 
     private String prefix;
 
     @Override
-    public void configure(Type type, Properties params, ServiceRegistry serviceRegistry) throws MappingException {
-        this.prefix = params.getProperty("prefix");
+    public void initialize(OrderIdGeneration annotation, Member member, GeneratorCreationContext context) {
+        this.prefix = annotation.prefix();
         if (this.prefix == null) {
             this.prefix = "ODER_"; // Fallback default
         }
     }
 
     @Override
-    public Serializable generate(SharedSessionContractImplementor session, Object object) throws HibernateException {
+    public Object generate(SharedSessionContractImplementor session, Object object) throws HibernateException {
         Long itemId = null;
         if (object instanceof Order) {
             itemId = ((Order) object).getItemId();

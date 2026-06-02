@@ -38,7 +38,7 @@ public class PrefixedUUIDGenerator implements IdentifierGenerator, Configurable 
     }
 
     @Override
-    public Serializable generate(SharedSessionContractImplementor session, Object object) throws HibernateException {
+    public Object generate(SharedSessionContractImplementor session, Object object) throws HibernateException {
         String uuid = UUID.randomUUID().toString().replace("-", "");
         
         if (uuid.length() > length) {

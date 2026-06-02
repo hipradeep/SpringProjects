@@ -17,7 +17,7 @@ import org.hibernate.id.IdentifierGenerator;
 public class TableIdGenerator implements IdentifierGenerator {
 
 	@Override
-	public Serializable generate(SharedSessionContractImplementor session, Object object) throws HibernateException {
+	public Object generate(SharedSessionContractImplementor session, Object object) throws HibernateException {
 
 		if (object instanceof Bank) {
 			Bank bank = (Bank) object;

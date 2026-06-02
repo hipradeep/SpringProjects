@@ -1,12 +1,10 @@
 package com.hipradeep.code.model;
 
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
+import com.hipradeep.code.jpa.OrderIdGeneration;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 /**
  * Order entity utilizing the custom sequence generator based on item ID.
@@ -16,14 +14,7 @@ import javax.persistence.Table;
 public class Order {
 
     @Id
-    @GeneratedValue(generator = "order-id-generator")
-    @GenericGenerator(
-            name = "order-id-generator",
-            strategy = "com.hipradeep.code.jpa.OrderIdGenerator",
-            parameters = {
-                    @Parameter(name = "prefix", value = "ODER_")
-            }
-    )
+    @OrderIdGeneration(prefix = "ODER_")
     private String id;
 
     private Long itemId;
