@@ -2,7 +2,6 @@ package com.hipradeep.code.controller;
 
 import com.hipradeep.code.entity.User;
 import com.hipradeep.code.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,9 +13,12 @@ import java.util.Map;
 
 @RestController
 public class LoginController {
+    private final UserRepository userRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    public LoginController(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
 
     @GetMapping("/api/login")
     public ResponseEntity<?> login(Authentication authentication) {
